@@ -1,0 +1,114 @@
+using gold.structures.automaton.*
+using gold.visualization.automaton.*
+using gold.structures.map.*
+
+procedure main ( args : String [ ] ) begin
+	c = createCoder ( ) 
+	d = createDecoder( )
+	Utilities.testCodeDecode(c,d)
+end
+
+
+
+
+function createCoder ( ) : ITransducer begin
+
+	Q := {"I", "F", "E"} ∪ (('a'‥'z')×(0‥2))
+
+	Σ := ( 'a' ‥ 'z' ) ∪ {' ', '$'}
+	Out := ( '0' ‥ '2' ) ∪ ( 'a' ‥ 'z' ) ∪ { '$', '*'}
+
+	q₀ := "I"
+	F := {"F"} 
+	return GDeterministicTransducer ( Q , Σ , Out , q₀ , F , δ , g , h )
+end
+
+function createDecoder ( ) : ITransducer begin
+
+	Q := (( 'a' ‥ 'z' )×( 0 ‥ 9 )) ∪ {⟨'a',-1⟩,⟨'a',-2⟩,⟨'a',-3⟩,⟨'a',-4⟩} // Asumimos que una palabra no tendrá más de 9 repeticiones de la primera letra
+
+	//Out := ( 'a' ‥ 'z' ) ∪ {' ', '$'}
+	In := ( '0' ‥ '2' ) ∪ ( 'a' ‥ 'z' ) ∪ { '$', '*'}  
+	Out:= ( 'a' ‥ 'z' ) ∪ { '$', ' '}
+	
+	q₀ := ⟨'a',-1⟩
+	F := {⟨'a',-3⟩}
+	return GDeterministicTransducer ( Q , In , Out , q₀ , F , δ1 , g1 , h1 )
+end
+
+
+function δ ( q, s ) begin
+	if q="I" and s='$' then return "F"
+	elseif q="I" and  s ∈ ('a'‥'z') then  return ⟨s,0⟩
+	else return "E"	
+	
+	end
+end
+
+function δ (⟨first,count⟩, s) begin
+  if s = '$' then return "F"
+  
+  elseif s=' ' then return "I"
+  	
+  	
+  elseif  s=first then return ⟨first, (count+1)% 3⟩
+  else return  ⟨first,count⟩
+  end
+
+end
+
+ function h ( q, s ) begin
+	if q="I" and s='$' then return s
+	elseif q="I" and  s ∈ ('a'‥'z') then return s
+	else return λ	
+	
+	end
+end
+
+function h (⟨first,count⟩, s) begin
+  if s = '$' then return ""+count+"$"
+  
+  elseif s=' ' then return ""+count
+  	
+  	
+  elseif  s=first then return  "*"
+  else return  s
+  end
+
+end
+
+function g ( q ) begin
+	return λ
+end
+
+function g1 ( ⟨chr,count⟩ ) begin
+	//if count = -2 and chr='a' then return ' '
+	//elseif count=-3 then return '$'
+	//else return λ
+	//end
+	return λ
+end
+
+
+function δ1 ( ⟨chr,count⟩, s ) begin
+	if s = chr and count != -1 then return ⟨'a',-4⟩
+	elseif count = -1 and s != '*' and s != '$' and s ∉ ('0'‥'9') then return ⟨s,0⟩
+	elseif count = 9 then return ⟨'a',-4⟩
+	elseif  count = -2 and s∈('a'‥'z') then return ⟨s,0⟩
+	elseif s != chr and s != '*' and s != '$' and s ∉ ('0'‥'9') then return ⟨chr,count⟩
+	elseif s = '*' then return ⟨chr,count+1⟩
+	elseif s∈('0'‥'9') then return ⟨'a',-2⟩
+  	elseif  count = -2 and s='$'then return ⟨'a',-3⟩
+  	else return ⟨'a',-4⟩
+	end
+end
+
+function h1 ( ⟨chr,count⟩, s ) begin
+	if count = -1 and s != '*' and s != '$' and s ∉ ('0'‥'9') then return s
+	elseif  count = -2 and s∈('a'‥'z') then return " "+s
+	elseif  count = -2 and s='$'then return '$'
+	elseif s = '*' then return chr
+	elseif s != chr and s != '*' and s != '$' and s ∉ ('0'‥'9') then return s
+	else return λ
+	end
+end
